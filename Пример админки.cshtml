@@ -1,0 +1,34 @@
+using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
+namespace BackendService.Controllers
+{
+    [ApiController]
+    [Route("api/[controller]")]
+    public class KeysController : ControllerBase
+    {
+        // Метод для добавления нового ключа
+        [HttpPost("add")]
+        public async Task<ActionResult<bool>> AddKey([FromBody] string key)
+        {
+            try
+            {
+                await AddKeyToDatabaseAsync(key);
+                return Ok(true);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = $"Ошибка при добавлении ключа: {ex.Message}" });
+            }
+        }
+
+        // Метод для проверки наличия ключа
+        [HttpPost("check")]
+        public ActionResult<bool> CheckKey([FromBody] string key)
+        {
+            try
+            {
+                return Ok(CheckIfKeyExists(key));
+            }
+            catch (Exception
