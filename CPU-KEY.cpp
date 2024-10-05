@@ -1,17 +1,11 @@
 #include <iostream>
 #include <fstream>
-#include <Windows.h>
+#include <windows.h>
 #include <string>
 #include <vector>
-#if defined(_WIN32) || defined(_WIN64)
-#include <intrin.h>  // Для Windows
-#else
-#include <cpuid.h>   // Для Linux и MacOS
-#endif
-
+#include <shlobj.h> // Для OpenFileDialog
 
 using namespace std;
-const string DB_FILENAME = "keys.txt";
 
 // Функция для получения хеша процессора
 uint64_t GetProcessorID() {
@@ -33,11 +27,7 @@ uint64_t GetProcessorID() {
 std::string getCPUID() {
     unsigned int regs[4] = { 0 };
 
-#if defined(_WIN32) || defined(_WIN64)
     __cpuid((int*)regs, 1);  // Вызов CPUID для Windows
-#else
-    __get_cpuid(1, &regs[0], &regs[1], &regs[2], &regs[3]);  // Вызов CPUID для Linux и MacOS
-#endif
 
     // Собираем идентификатор процессора на основе значений регистров
     char cpu_id[17]; // 16 символов + завершающий символ '\0'
@@ -46,15 +36,39 @@ std::string getCPUID() {
     return std::string(cpu_id);
 }
 
+void chooseDatabaseFile() {
+    OPENFILENAME ofn;       // Структура для работы с OpenFileDialog
+    TCHAR szFilter[] = _T("Text Files (*.txt)\0*.txt\0All Files (*.*)\0*.*\0");
+    ZeroMemory(&ofn, sizeof(ofn));
+    ofn.lStructSize = sizeof(OPENFILENAME);
+    ofn.hwndOwner = NULL;
+    ofn.lpstrFilter = szFilter;
+    ofn.nFilterIndex = 1;
+    ofn.lpstrFile = NULL;
+    ofn.nMaxFile = MAX_PATH;
+    ofn.lpstrTitle = _T("Выберите файл базы данных");
+    ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
+
+    if (GetOpenFileName(&ofn) != 0) {
+        string filename = ofn.lpstrFile;
+        cout << "Выбранный файл базы данных: " << filename << endl;
+    } else {
+        cout << "Отмена выбора файла базы данных." << endl;
+    }
+}
+
 int main() {
 
     // Получение хеша процессора
     auto processorID = getCPUID();
-    cout << "Hash of the processor: "<< processorID << endl;
+    cout << "Hash of the processor: " << processorID << endl;
 
-    ifstream dbFile(DB_FILENAME);
-    if (!dbFile.is_open()) {
-        cerr << "Failed to open database file." << endl;
+    chooseDatabaseFile();
+
+    ifstream dbFile;
+    dbFile.open(filename);
+    if (!dbFile.good()) {
+        cerr << "Не удалось открыть выбранный файл базы данных." << endl;
         return 1;
     }
 
@@ -67,11 +81,11 @@ int main() {
 
     for (const auto& key : keys) {
         if (processorID == key) {
-            cout << "Access granted!" << endl;
+            cout << "Доступ разрешен!" << endl;
             return 0;
         }
     }
 
-    cout << "Access denied." << endl;
+    cout << "Доступ запрещен." << endl;
     return 1;
 }
