@@ -8,6 +8,20 @@
 
 using namespace std;
 
+//Функция для преоброзования Wchar в std:string
+std::string wcharToString(const std::wstring& wstr) {
+    // Получаем необходимый размер буфера для хранения строки в кодировке UTF-8
+    int size_needed = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), (int)wstr.size(), NULL, 0, NULL, NULL);
+
+    // Создаем буфер необходимого размера
+    std::string strTo(size_needed, 0);
+
+    // Выполняем преобразование из wchar_t в UTF-8
+    WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), (int)wstr.size(), &strTo[0], size_needed, NULL, NULL);
+
+    return strTo;
+}
+
 // Функция для получения хеша процессора
 uint64_t GetProcessorID() {
     uint32_t eax = 0, ebx = 0, ecx = 0, edx = 0;
@@ -37,38 +51,41 @@ std::string getCPUID() {
     return std::string(cpu_id);
 }
 
-void chooseDatabaseFile() {
-    OPENFILENAME ofn;       // Структура для работы с OpenFileDialog
-    char szFilter[] = "Text Files (*.txt)\0*.txt\0All Files (*.*)\0*.*\0";
-    ZeroMemory(&ofn, sizeof(ofn));
+std::string chooseDatabaseFile() {
+    OPENFILENAME ofn;               // Структура для работы с OpenFileDialog
+    wchar_t szFilter[] = L"Text Files (*.txt)\0*.txt\0All Files (*.*)\0*.*\0";  // Фильтры файлов
+    wchar_t szFile[MAX_PATH] = { 0 };   // Буфер для пути к файлу
+    ZeroMemory(&ofn, sizeof(ofn));   // Инициализация структуры
     ofn.lStructSize = sizeof(OPENFILENAME);
-    ofn.hwndOwner = NULL;
-    ofn.lpstrFilter = szFilter;
-    ofn.nFilterIndex = 1;
-    ofn.lpstrFile = NULL;
-    ofn.nMaxFile = MAX_PATH;
-    ofn.lpstrTitle = "Выберите файл базы данных";
-    ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
+    ofn.hwndOwner = NULL;            // Окно владельца (NULL для консольного приложения)
+    ofn.lpstrFilter = szFilter;      // Применяемый фильтр
+    ofn.nFilterIndex = 1;            // Индекс фильтра
+    ofn.lpstrFile = szFile;          // Буфер для выбранного файла
+    ofn.nMaxFile = MAX_PATH;         // Максимальный размер пути к файлу
+    ofn.lpstrTitle = L"Выберите файл базы данных"; // Заголовок диалога
+    ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;  // Флаги диалога
 
+    // Открыть диалог выбора файла
     if (GetOpenFileName(&ofn) != 0) {
-        string filename = "%1";
-        cout << "Выбранный файл базы данных: " << filename << endl;
+        wstring ws(ofn.lpstrFile);
+        return wcharToString(ws);
     }
-    else {
-        cout << "Отмена выбора файла базы данных." << endl;
-    }
+    return std::string();
 }
 
 int main() {
+    /*Локализатор*/
+    SetConsoleOutputCP(1251);
+    SetConsoleCP(1251);
 
     // Получение хеша процессора
     auto processorID = getCPUID();
     cout << "Hash of the processor: " << processorID << endl;
 
-    chooseDatabaseFile();
+    auto filepath = chooseDatabaseFile();
 
-    ifstream dbFile("%1");
-    if (!dbFile.good()) {
+    ifstream dbFile(filepath);
+    if (!dbFile.is_open()) {
         cerr << "Не удалось открыть выбранный файл базы данных." << endl;
         return 1;
     }
