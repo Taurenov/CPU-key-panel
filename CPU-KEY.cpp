@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <shlobj.h> // Для OpenFileDialog
+#include <intrin.h>  // Для Windows
 
 using namespace std;
 
@@ -38,7 +39,7 @@ std::string getCPUID() {
 
 void chooseDatabaseFile() {
     OPENFILENAME ofn;       // Структура для работы с OpenFileDialog
-    TCHAR szFilter[] = _T("Text Files (*.txt)\0*.txt\0All Files (*.*)\0*.*\0");
+    char szFilter[] = "Text Files (*.txt)\0*.txt\0All Files (*.*)\0*.*\0";
     ZeroMemory(&ofn, sizeof(ofn));
     ofn.lStructSize = sizeof(OPENFILENAME);
     ofn.hwndOwner = NULL;
@@ -46,13 +47,14 @@ void chooseDatabaseFile() {
     ofn.nFilterIndex = 1;
     ofn.lpstrFile = NULL;
     ofn.nMaxFile = MAX_PATH;
-    ofn.lpstrTitle = _T("Выберите файл базы данных");
+    ofn.lpstrTitle = "Выберите файл базы данных";
     ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
 
     if (GetOpenFileName(&ofn) != 0) {
-        string filename = ofn.lpstrFile;
+        string filename = "%1";
         cout << "Выбранный файл базы данных: " << filename << endl;
-    } else {
+    }
+    else {
         cout << "Отмена выбора файла базы данных." << endl;
     }
 }
@@ -65,8 +67,7 @@ int main() {
 
     chooseDatabaseFile();
 
-    ifstream dbFile;
-    dbFile.open(filename);
+    ifstream dbFile("%1");
     if (!dbFile.good()) {
         cerr << "Не удалось открыть выбранный файл базы данных." << endl;
         return 1;
